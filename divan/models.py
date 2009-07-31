@@ -1,6 +1,10 @@
 import re
 
+from django.conf import settings
 from django.db import models
+from couchdb import Server, client
+
+DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 'http://localhost:5984/')
 
 
 class BaseOption(models.Model):
@@ -36,3 +40,51 @@ class BaseOption(models.Model):
             except IndexError:
                 self.order = 1
         super(BaseOption, self).save(*args, **kwargs)
+
+
+class CouchModelMetaclass(type):
+    def __new__(cls, name, bases, dict):
+        new_class = super(CouchModelMetaclass, cls).__new__(cls, name, bases, dict)
+        opts = new_class._meta = getattr(new_class, 'Meta', None)
+        if opts is not None:
+            server_address = getattr(opts, 'server', None) or DEFAULT_COUCH_SERVER
+            server = Server(server_address)
+            db_name = getattr(opts, 'database', None) or settings.DEFAULT_COUCH_DATABASE
+            try:
+                new_class.database = server[db_name]
+            except client.ResourceNotFound:
+                new_class.database = server.create(db_name)
+        return new_class
+
+
+class CouchField(object):
+    def __init__(self, val, label):
+        self.value = val
+        self.label = label
+
+    def __unicode__(self):
+        return unicode(self.value)
+
+
+class BaseCouchModel(object):
+    def __init__(self, document_id):
+        self.doc = self.database[document_id]
+        model = self._meta.schema
+        self.groups = {}
+        self.fields = []
+        for field in model.objects.order_by('group', 'order'):
+            group = field.group
+            if not self.groups.has_key(group):
+                self.groups[field.group] = []
+            try:
+                val = self.doc[field.key]
+            except KeyError:
+                continue
+            setattr(self, field.key, CouchField(val, field.field_name))
+            new_attr = getattr(self, field.key)
+            self.fields.append(new_attr)
+            self.groups[group].append(new_attr)
+
+
+class CouchModel(BaseCouchModel):
+    __metaclass__ = CouchModelMetaclass
