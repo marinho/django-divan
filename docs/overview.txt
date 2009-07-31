@@ -1,0 +1,27 @@
+========
+OVERVIEW
+========
+
+Divan is toolkit for building applications with models whose schemas can be
+modified by the end user.  This is achieved with a combination of a SQL
+database and CouchDB.
+
+Divan provides an abstract model class, ``BaseOption``, which applications
+subclass and use to define the fields that will appear in a form/"model"
+instance.  Subclasses of the ``CouchForm`` class provided in ``divan.forms``
+then declare a couple of attributes that provide the bridge between CouchDB and
+the SQL database:
+
+    class ExampleOption(BaseOption):
+        pass
+
+    class ExampleForm(CouchForm):
+        class Meta:
+            database = 'example'
+            model = ExampleOption
+            server = 'http://myserver.com:5984/'
+
+If not defined, ``server`` will default either to settings.DEFAULT_COUCH_SERVER
+or CouchDB's own default, which is http://localhost:5984/.
+
+Please see the example app included.
