@@ -27,6 +27,7 @@ class BaseOption(models.Model):
     field_type = models.CharField(max_length=255)
     group = models.CharField(max_length=255, blank=True, default='')
     order = models.IntegerField(editable=False)
+    required = models.BooleanField(default=False)
 
     class Meta:
         abstract = True

@@ -5,9 +5,7 @@ from django_divan.example.forms import ExampleOptionForm
 from django_divan.example.models import ExampleOption, Example
 
 class CouchFormTestCase(TestCase):
-    def setUp(self):
-        ExampleOption.objects.create(field_name='Foo bar', field_type='CharField', group='test')
-        ExampleOption.objects.create(field_name='Baz quux', field_type='BooleanField', group='test')
+    fixtures = ['form_test.json']
 
     def test_unbound_form(self):
         form = ExampleOptionForm()
@@ -55,8 +53,6 @@ class CouchModelTestCase(TestCase):
         for group, fields in example.groups.iteritems():
             self.assertTrue(group in ('meat', 'vegetarian'))
             self.assertEquals(len(fields), 2)
-            for field in fields:
-                print field.value
 
     def test_doc_has_extra_keys(self):
         server = Server(settings.DEFAULT_COUCH_SERVER)

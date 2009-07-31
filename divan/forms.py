@@ -9,7 +9,7 @@ DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 'http://localho
 
 def create_form_field(option):
     FieldClass = getattr(forms, option.field_type)
-    return FieldClass(label=option.field_name)
+    return FieldClass(label=option.field_name, required=option.required)
 
 def get_saved_fields(model, groups):
     if groups is None:
@@ -36,10 +36,6 @@ def save_document(form, document_id, fields=None):
     return document
 
 class SQLFieldsMetaclass(type):
-    """
-    Metaclass that converts Field attributes to a dictionary called
-    'base_fields', taking into account parent class 'base_fields' as well.
-    """
     def __new__(cls, name, bases, attrs):
         new_class = super(SQLFieldsMetaclass,
                      cls).__new__(cls, name, bases, attrs)
@@ -49,7 +45,8 @@ class SQLFieldsMetaclass(type):
         if opts is not None:
             model = opts.model
             groups = getattr(opts, 'groups', None) 
-            new_class.base_fields = get_saved_fields(model, groups)
+            base_fields = get_saved_fields(model, groups)
+            new_class.base_fields = base_fields
             server_address = getattr(opts, 'server', None) or DEFAULT_COUCH_SERVER
             server = Server(server_address)
             db_name = getattr(opts, 'database', None) or settings.DEFAULT_COUCH_DATABASE
@@ -76,10 +73,6 @@ class BaseCouchForm(forms.BaseForm):
                                             *args, **kwargs)
 
     def save(self):
-        if self.document_id is None:
-            fail_message = 'created'
-        else:
-            fail_message = 'changed'
         return save_document(self, self.document_id, self.fields)
 
     def full_clean(self):
