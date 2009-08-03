@@ -6,11 +6,62 @@ Divan is toolkit for building applications with models whose schemas can be
 modified by the end user.  This is achieved with a combination of a SQL
 database and CouchDB.
 
+INSTALLATION
+------------
+
+Divan requires the couchdb-python_ library as well as a CouchDB 0.9.x server
+running on either the default port locally (5984) or an address defined by
+``DEFAULT_COUCH_SERVER`` in your Django settings module.
+
+Place the django_divan/divan folder on your PYTHONPATH and add 'divan' to the
+INSTALLED_APPS in your settings module.
+
+.. _couchdb-python: http://code.google.com/p/couchdb-python/
+
+USAGE
+-----
+
+User-defined "fields"
+~~~~~~~~~~~~~~~~~~~~~
+
 Divan provides an abstract model class, ``BaseOption``, which applications
 subclass and use to define the fields that will appear in a form/"model"
-instance.  Subclasses of the ``CouchForm`` class provided in ``divan.forms``
-then declare a couple of attributes that provide the bridge between CouchDB and
-the SQL database:
+instance.  
+
+``BaseOption`` includes the following fields:
+
+field_name
+    The human readable name of the field.  Used as the argument to the
+    ``label`` parameter of the field constructor.
+
+field_type
+    User-friendly names that map to one of the ``Field`` subclasses in
+    ``django.forms.fields``.  Only those that make sense are supported.
+
+group
+    String to tag groups of fields.  A future release will include JavaScript
+    for auto-completing to ensure consistency across instances.
+
+key
+    Auto-generated value from ``field_name``, lower-casing the string and
+    replacing non-alphanumeric characters with underscores.  When form classes
+    are created, the field will be accessible as an attribute with this name.
+
+required
+    Determines whether or not the field will be required in forms.
+
+order
+    Secondary sort condition after ``group``.  This is currently useless.  A
+    future release will include JavaScript for drag & drop sorting of Option
+    instances in the Django admin.
+
+
+Forms for the user-defined fields
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Subclasses of the ``CouchForm`` class provided in ``divan.forms`` declare a
+couple of attributes that provide the bridge between CouchDB and the SQL
+database:
 
     class ExampleOption(BaseOption):
         pass
@@ -20,8 +71,26 @@ the SQL database:
             database = 'example'
             model = ExampleOption
             server = 'http://myserver.com:5984/'
+            groups = ['address data']
 
 If not defined, ``server`` will default either to settings.DEFAULT_COUCH_SERVER
 or CouchDB's own default, which is http://localhost:5984/.
 
-Please see the example app included.
+The fields added to the form will be filtered by the group strings that are
+assigned as a list to ``group``.  If ``group`` is not defined, a field will be
+created for every instance of ``model``.
+
+``CouchForm`` subclasses inherit from ``BaseForm`` with a different metaclass,
+so they have all of the goodies you expect from a Django ``Form`` subclass,
+including ``is_valid()``, ``is_bound``, ``initial``, etc.  
+
+They can also be instantiated with an additional keyword argument ``document``,
+which should be a ``Document`` object as retrieved from CouchDB by the Python
+client library.
+
+Like ``ModelForm`` subclasses, ``CouchForm`` subclasses have a ``save()``
+method.  If the given instance was instantiated with an argument to the
+``document`` parameter, it will update the document in question; otherwise, it
+will create a new one.  ``save()`` returns the new or updated document.
+
+
