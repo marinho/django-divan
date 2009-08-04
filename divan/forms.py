@@ -5,11 +5,13 @@ from django.utils.datastructures import SortedDict
 from django.forms.widgets import media_property
 from couchdb import Server, client
 
-DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 'http://localhost:5984/')
+DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 
+        'http://localhost:5984/')
 
 def create_form_field(option):
     FieldClass = getattr(forms, option.field_type)
-    return FieldClass(label=option.field_name, required=option.required)
+    return FieldClass(label=option.field_name, required=option.required, 
+            help_text=option.help_text)
 
 def get_saved_fields(model, groups):
     if groups is None:
