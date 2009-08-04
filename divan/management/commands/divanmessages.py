@@ -10,7 +10,7 @@ from django.conf import settings
 from django.core.management.base import CommandError, BaseCommand
 from django.db import models
 
-from divan.models import BaseOption
+from divan.models import BaseOption, OptionModelBase
 
 try:
     set
@@ -24,7 +24,7 @@ warnings.filterwarnings('ignore', category=DeprecationWarning, message=r'os\.pop
 DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 
         'http://localhost:5984/')
 
-def make_messages(locale=None, verbosity, fieldstrings):
+def make_messages(locale=None, verbosity=1, fieldstrings='all'):
     """
     Uses the locale directory from the Django SVN tree or an application/
     project to process all
@@ -80,24 +80,29 @@ def make_messages(locale=None, verbosity, fieldstrings):
         if os.path.exists(potfile):
             os.unlink(potfile)
 
-        keys = []
         field_names = []
         help_text = []
-        for apps in models.get_apps():
+        values = []
+        for app in models.get_apps():
             app_name = app.__name__.split('.')[-2]
             model_list = models.get_models(app)
             for model in model_list:
-                if isinstance(model, BaseOption):
+                if model.__metaclass__.__name__ == 'OptionModelBase':
+                    print "Processing %s.%s model" % (app_name, model._meta.object_name)
+                    db = model.couchdb()
                     for field in model.objects.all():
-                        keys.append(field.key)
                         if fieldstrings in ('fieldnames', 'all'):
                             field_names.append(field.field_name)
                         if fieldstrings in ('helptext', 'all'):
                             help_text.append(field.help_text)
-                        # get values for keys in database
-
-        cmd = 'cat "%s" xgettext -d %s -L Python --keyword=gettext_noop --keyword=gettext_lazy --keyword=ngettext_lazy:1,2 --keyword=ugettext_noop --keyword=ugettext_lazy --keyword=ungettext_lazy:1,2 --from-code UTF-8 -o - "%s"' % (
-            domain, os.path.join(dirpath, thefile))
+                        if field.field_type == 'CharField' and fieldstrings in ('values', 'all'):
+                            query_func = "function (doc) { if (doc.%s) { emit(doc.%s, null); }}" % (field.key, field.key)
+                            results = db.query(query_func)
+                            values.extend(row.key for row in results)
+        strings = field_names + help_text + values
+        string_blob = '\\n'.join(list(set("\'%s\'" % s.replace("'", "\\'") for s in strings if s)))
+        cmd = """echo "%s" | xgettext -d %s -L Python -a --keyword=gettext_noop --keyword=gettext_lazy --keyword=ngettext_lazy:1,2 --keyword=ugettext_noop --keyword=ugettext_lazy --keyword=ungettext_lazy:1,2 --from-code UTF-8 -o - -""" % (
+            string_blob, domain) 
         (stdin, stdout, stderr) = os.popen3(cmd, 't')
         msgs = stdout.read()
         errors = stderr.read()
@@ -107,10 +112,6 @@ def make_messages(locale=None, verbosity, fieldstrings):
         if xgettext_reencodes_utf8:
             msgs = msgs.decode('utf-8').encode('iso-8859-1')
 
-        if thefile != file:
-            old = '#: '+os.path.join(dirpath, thefile)[2:]
-            new = '#: '+os.path.join(dirpath, file)[2:]
-            msgs = msgs.replace(old, new)
         if os.path.exists(potfile):
             # Strip the header
             msgs = '\n'.join(dropwhile(len, msgs.split('\n')))
@@ -118,8 +119,6 @@ def make_messages(locale=None, verbosity, fieldstrings):
             msgs = msgs.replace('charset=CHARSET', 'charset=UTF-8')
         if msgs:
             open(potfile, 'ab').write(msgs)
-        if thefile != file:
-            os.unlink(os.path.join(dirpath, thefile))
 
         if os.path.exists(potfile):
             (stdin, stdout, stderr) = os.popen3('msguniq --to-code=utf-8 "%s"' % potfile, 't')
@@ -143,7 +142,7 @@ class Command(BaseCommand):
         make_option('--locale', '-l', default=None, dest='locale',
             help='Creates or updates the message files only for the given locale (e.g. pt_BR).'),
         make_option('--fieldstrings', '-f', default=None, dest='locale',
-            help='Fill in please...'),
+            help='Determines what strings are pulled from CouchDB. Options: "all", "helptext", "fieldnames", "values"'),
     )
     help = "Creates/updates .po files for BaseOption subclass strings and all CouchDB documents with matching keys."
 
@@ -155,7 +154,7 @@ class Command(BaseCommand):
             raise CommandError("Command doesn't accept any arguments")
 
         locale = options.get('locale')
-        fieldstrings = options.get('fieldstrings')
+        fieldstrings = options.get('fieldstrings', 'all')
         verbosity = int(options.get('verbosity'))
-        make_messages(locale, verbosity, models, fieldstrings)
+        make_messages(locale, verbosity, fieldstrings)
 
