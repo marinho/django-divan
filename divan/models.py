@@ -2,6 +2,7 @@ import re
 
 from django.conf import settings
 from django.db import models
+from django.utils.translation import ugettext as _
 from couchdb import Server, client
 
 DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 'http://localhost:5984/')
@@ -31,7 +32,7 @@ class BaseOption(models.Model):
     )
     key = models.CharField(max_length=255, editable=False)
     field_name = models.CharField(max_length=255)
-    field_type = models.CharField(max_length=255)
+    field_type = models.CharField(max_length=255, choices=FIELD_TYPE_OPTIONS)
     group = models.CharField(max_length=255, blank=True, default='')
     order = models.IntegerField(editable=False)
     help_text = models.TextField(blank=True)
@@ -40,6 +41,9 @@ class BaseOption(models.Model):
     class Meta:
         abstract = True
         ordering = ('group', 'order',)
+
+    def __unicode__(self):
+        return '%s (%s)' % (self.field_name, self.get_field_type_display())
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -50,9 +54,9 @@ class BaseOption(models.Model):
                 self.order = 1
         super(BaseOption, self).save(*args, **kwargs)
 
-    @property
+    @classmethod
     def couchdb(self):
-        server_address = getattr(opts, 'server', None) or DEFAULT_COUCH_SERVER
+        server_address = getattr(self._divan, 'server', None) or DEFAULT_COUCH_SERVER
         server = Server(server_address)
         db_name = getattr(self._divan, 'database', None) or settings.DEFAULT_COUCH_DATABASE
         try:
