@@ -55,6 +55,11 @@ order
     future release will include JavaScript for drag & drop sorting of Option
     instances in the Django admin.
 
+``BaseOption`` subclasses also define an inner ``Divan`` class with a
+``database`` attribute, set to the name of the CouchDB database in which the
+objects will be created.  If this class is not defined, Divan will look for
+``settings.DEFAULT_COUCH_DATABASE``, and otherwise throw an error.
+
 
 Forms for the user-defined fields
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,7 +73,6 @@ database:
 
     class ExampleForm(CouchForm):
         class Meta:
-            database = 'example'
             model = ExampleOption
             server = 'http://myserver.com:5984/'
             groups = ['address data']
@@ -92,5 +96,3 @@ Like ``ModelForm`` subclasses, ``CouchForm`` subclasses have a ``save()``
 method.  If the given instance was instantiated with an argument to the
 ``document`` parameter, it will update the document in question; otherwise, it
 will create a new one.  ``save()`` returns the new or updated document.
-
-

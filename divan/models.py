@@ -6,8 +6,15 @@ from couchdb import Server, client
 
 DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 'http://localhost:5984/')
 
+class OptionModelBase(models.base.ModelBase):
+    def __init__(cls, name, bases, attrs):
+        opts = getattr(cls, 'Divan', None)
+        setattr(cls, '_divan', opts)
+
 
 class BaseOption(models.Model):
+    __metaclass__ = OptionModelBase
+
     FIELD_TYPE_OPTIONS = (
         ('CharField', 'Text'),
         ('IntegerField', 'Integer'),
@@ -43,6 +50,17 @@ class BaseOption(models.Model):
                 self.order = 1
         super(BaseOption, self).save(*args, **kwargs)
 
+    @property
+    def couchdb(self):
+        server_address = getattr(opts, 'server', None) or DEFAULT_COUCH_SERVER
+        server = Server(server_address)
+        db_name = getattr(self._divan, 'database', None) or settings.DEFAULT_COUCH_DATABASE
+        try:
+            database = server[db_name]
+        except client.ResourceNotFound:
+            database = server.create(db_name)
+        return database
+
 
 class CouchModelMetaclass(type):
     def __new__(cls, name, bases, dict):
@@ -51,7 +69,7 @@ class CouchModelMetaclass(type):
         if opts is not None:
             server_address = getattr(opts, 'server', None) or DEFAULT_COUCH_SERVER
             server = Server(server_address)
-            db_name = getattr(opts, 'database', None) or settings.DEFAULT_COUCH_DATABASE
+            db_name = getattr(opts.schema._divan, 'database', None) or settings.DEFAULT_COUCH_DATABASE
             try:
                 new_class.database = server[db_name]
             except client.ResourceNotFound:

@@ -2,6 +2,7 @@ from django import forms
 from django.db.models import Q
 from django.conf import settings
 from django.utils.datastructures import SortedDict
+from django.utils.translation import ugettext as _
 from django.forms.widgets import media_property
 from couchdb import Server, client
 
@@ -10,8 +11,8 @@ DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER',
 
 def create_form_field(option):
     FieldClass = getattr(forms, option.field_type)
-    return FieldClass(label=option.field_name, required=option.required, 
-            help_text=option.help_text)
+    return FieldClass(label=_(option.field_name), required=option.required, 
+            help_text=_(option.help_text))
 
 def get_saved_fields(model, groups):
     if groups is None:
@@ -51,7 +52,7 @@ class SQLFieldsMetaclass(type):
             new_class.base_fields = base_fields
             server_address = getattr(opts, 'server', None) or DEFAULT_COUCH_SERVER
             server = Server(server_address)
-            db_name = getattr(opts, 'database', None) or settings.DEFAULT_COUCH_DATABASE
+            db_name = getattr(model._divan, 'database', None) or settings.DEFAULT_COUCH_DATABASE
             try:
                 new_class.database = server[db_name]
             except client.ResourceNotFound:

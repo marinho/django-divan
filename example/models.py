@@ -4,8 +4,10 @@ from django_divan.divan.models import BaseOption, CouchModel
 class ExampleOption(BaseOption):
     active = models.BooleanField()
 
+    class Divan:
+        database = 'example'
+
 
 class Example(CouchModel):
     class Meta:
-        database = 'example'
         schema = ExampleOption
