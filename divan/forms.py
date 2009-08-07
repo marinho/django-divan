@@ -11,8 +11,11 @@ DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER',
 
 def create_form_field(option):
     FieldClass = getattr(forms, option.field_type)
+    help_text = getattr(option, 'help_text', None)
+    if help_text:
+        help_text = _(help_text)
     return FieldClass(label=_(option.field_name), required=option.required, 
-            help_text=_(option.help_text))
+            help_text=help_text)
 
 def get_saved_fields(model, groups):
     if groups is None:
