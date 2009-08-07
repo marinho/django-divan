@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from django.conf import settings
 from django.test import TestCase
 from couchdb import Server
@@ -32,6 +33,27 @@ class CouchFormTestCase(TestCase):
         for k, v in doc_dict.items():
             self.assertTrue(k in doc)
             self.assertEquals(doc[k], v)
+
+
+class CouchDateTimeFieldTestCase(TestCase):
+    fixtures = ['form_test.json']
+
+    def test_datetime_field(self):
+        ExampleOption.objects.create(field_name='Date and time', field_type='DateTimeField', group='blah')
+        now = datetime.now()
+        doc_dict = {'foo_bar': 'Spam, spam, spam', 'baz_quux': False, 'date_and_time': now}
+        form = ExampleOptionForm(doc_dict)
+        self.assertTrue(form.is_bound)
+        self.assertTrue(form.is_valid())
+        try:
+            doc = form.save()
+        except TypeError:
+            self.fail()
+        obj = CouchModel(document_id=doc.id)
+        self.assertEquals(obj.date_and_time, now)
+        
+
+
     
 
 class CouchModelTestCase(TestCase):
