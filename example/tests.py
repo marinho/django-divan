@@ -5,18 +5,31 @@ from couchdb import Server
 from django_divan.example.forms import ExampleOptionForm
 from django_divan.example.models import ExampleOption, Example
 
+DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 'http://localhost:5984/')
+
+
+class DivanOptionTestCase(TestCase):
+    def test_name_mangling(self):
+        option = ExampleOption.objects.create(
+            field_name='Admissions Contact Name', 
+            field_type='CharField', 
+            group='test'
+        )
+        self.assertEquals(option.key, 'admissions_contact_name')
+
+
 class CouchFormTestCase(TestCase):
     fixtures = ['form_test.json']
 
     def test_unbound_form(self):
         form = ExampleOptionForm()
         for field in form:
-            self.assertTrue(field.label in ('Foo bar', 'Baz quux'))
+            self.assertTrue(field.label in ('Foo bar', 'Baz quux', 'Date and time', 'Date', 'Time'))
         for field in form.fields.keys():
-            self.assertTrue(field in ('foo_bar', 'baz_quux')) 
+            self.assertTrue(field in ('foo_bar', 'baz_quux', 'date_and_time', 'date', 'time')) 
 
     def test_initialized_form(self):
-        server = Server(settings.DEFAULT_COUCH_SERVER)
+        server = Server(DEFAULT_COUCH_SERVER)
         db = server['example']
         doc_dict = {'foo_bar': 'Spam, spam, spam', 'baz_quux': False}
         doc_id = db.create(doc_dict)
@@ -36,24 +49,33 @@ class CouchFormTestCase(TestCase):
 
 
 class CouchDateTimeFieldTestCase(TestCase):
-    fixtures = ['form_test.json']
+    fixtures = ['datetime_field_test.json']
 
     def test_datetime_field(self):
-        ExampleOption.objects.create(field_name='Date and time', field_type='DateTimeField', group='blah')
         now = datetime.now()
-        doc_dict = {'foo_bar': 'Spam, spam, spam', 'baz_quux': False, 'date_and_time': now}
+        today = now.date()
+        timeslot = now.time()
+        doc_dict = {
+            'foo_bar': 'Spam, spam, spam', 
+            'baz_quux': False, 
+            'date_and_time': now,
+            'date': today,
+            'time': timeslot
+        }
         form = ExampleOptionForm(doc_dict)
+        for k in ('date', 'date_and_time', 'time'):
+            self.assertTrue(k in form.fields.keys())
         self.assertTrue(form.is_bound)
         self.assertTrue(form.is_valid())
         try:
             doc = form.save()
-        except TypeError:
-            self.fail()
-        obj = CouchModel(document_id=doc.id)
-        self.assertEquals(obj.date_and_time, now)
+        except TypeError, e:
+            self.fail(e)
+        obj = Example(document_id=doc.id)
+        self.assertEquals(obj.date_and_time.value, now)
+        self.assertEquals(obj.date.value, today)
+        self.assertEquals(obj.time.value, timeslot)
         
-
-
     
 
 class CouchModelTestCase(TestCase):
@@ -64,7 +86,7 @@ class CouchModelTestCase(TestCase):
         ExampleOption.objects.create(field_name='Toast', field_type='FloatField', group='vegetarian')
 
     def test_iterate_over_fields(self):
-        server = Server(settings.DEFAULT_COUCH_SERVER)
+        server = Server(DEFAULT_COUCH_SERVER)
         db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5, 'toast': 0.456}
         doc_id = db.create(doc_dict)
@@ -77,7 +99,7 @@ class CouchModelTestCase(TestCase):
             self.assertEquals(len(fields), 2)
 
     def test_doc_has_extra_keys(self):
-        server = Server(settings.DEFAULT_COUCH_SERVER)
+        server = Server(DEFAULT_COUCH_SERVER)
         db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5, 'toast': 0.456, 'juice': 10}
         doc_id = db.create(doc_dict)
@@ -86,7 +108,7 @@ class CouchModelTestCase(TestCase):
         self.assertTrue(hasattr(example, 'spam'))
 
     def test_doc_has_missing_values(self):
-        server = Server(settings.DEFAULT_COUCH_SERVER)
+        server = Server(DEFAULT_COUCH_SERVER)
         db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5}
         doc_id = db.create(doc_dict)

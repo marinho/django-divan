@@ -1,9 +1,11 @@
 import re
+from datetime import date, datetime, time
 
 from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext as _
 from couchdb import Server, client
+from divan.timestamps import from_timestamp
 
 DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 'http://localhost:5984/')
 
@@ -104,6 +106,8 @@ class BaseCouchModel(object):
                 val = self.doc[field.key]
             except KeyError:
                 continue
+            if val and field.field_type in ('DateField', 'DateTimeField', 'TimeField'):
+                val = from_timestamp(val)
             setattr(self, field.key, CouchField(val, field.field_name))
             new_attr = getattr(self, field.key)
             self.fields.append(new_attr)

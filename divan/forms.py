@@ -1,3 +1,4 @@
+from datetime import date, datetime, time
 from django import forms
 from django.db.models import Q
 from django.conf import settings
@@ -5,6 +6,7 @@ from django.utils.datastructures import SortedDict
 from django.utils.translation import ugettext as _
 from django.forms.widgets import media_property
 from couchdb import Server, client
+from divan.timestamps import from_timestamp, to_timestamp
 
 DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 
         'http://localhost:5984/')
@@ -30,7 +32,11 @@ def get_saved_fields(model, groups):
 
 def save_document(form, document_id, fields=None):
     cleaned_data = form.cleaned_data
+    data = cleaned_data.copy()
     db = form.database
+    for k, v in data.items():
+        if isinstance(v, (date, time, datetime)):
+            cleaned_data[k] = to_timestamp(v)
     if document_id is not None:
         document = db[document_id]
         for k, v in cleaned_data.items():
