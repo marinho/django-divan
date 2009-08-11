@@ -40,7 +40,8 @@ def save_document(form, document_id, fields=None):
     if document_id is not None:
         document = db[document_id]
         for k, v in cleaned_data.items():
-            document[k] = v
+            if v:
+                document[k] = v
         db[document_id] = document
     else:
         doc_id = db.create(cleaned_data)
