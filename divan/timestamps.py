@@ -20,7 +20,7 @@ def from_iso8601(timestamp):
         if time_re.match(timestamp):
             args = [int(a) for a in time_re.match(timestamp).groups()]
             return time(*args)
-        raise ValueError('Invalid timestamp format')
+        return timestamp
     date_args = date_re.match(d).groups()
     time_args = time_re.match(t).groups()
     h, m, s = timestamp.split(':')
