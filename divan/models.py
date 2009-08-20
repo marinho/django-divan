@@ -108,10 +108,10 @@ class BaseCouchModel(object):
                 continue
             if val and field.field_type in ('DateField', 'DateTimeField', 'TimeField'):
                 val = from_timestamp(val)
-            setattr(self, field.key, CouchField(val, field.field_name))
-            new_attr = getattr(self, field.key)
-            self.fields.append(new_attr)
-            self.groups[group].append(new_attr)
+            setattr(self, field.key, val)
+            cf = CouchField(val, field.field_name)
+            self.fields.append(cf)
+            self.groups[group].append(cf)
 
 
 class CouchModel(BaseCouchModel):
