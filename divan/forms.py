@@ -96,11 +96,6 @@ class BaseCouchForm(forms.BaseForm):
     def save(self):
         return save_document(self, self.document_id, self.fields)
 
-    def full_clean(self):
-        # import pdb; pdb.set_trace()
-        super(BaseCouchForm, self).full_clean()
-        
-
 
 class CouchForm(BaseCouchForm):
     __metaclass__ = SQLFieldsMetaclass
