@@ -71,11 +71,15 @@ class BaseOption(models.Model):
 class CouchModelMetaclass(type):
     def __new__(cls, name, bases, dict):
         new_class = super(CouchModelMetaclass, cls).__new__(cls, name, bases, dict)
-        opts = new_class._meta = getattr(new_class, 'Meta', None)
+        opts = getattr(new_class, 'Divan', None)
         if opts is not None:
+            new_class._divan = opts() 
             server_address = getattr(opts, 'server', None) or DEFAULT_COUCH_SERVER
             server = Server(server_address)
             db_name = getattr(opts.schema._divan, 'database', None) or settings.DEFAULT_COUCH_DATABASE
+            for f in ('DateField', 'DateTimeField', 'TimeField'):
+                if not hasattr(new_class._divan, f):
+                    setattr(new_class._divan, f, from_timestamp)
             try:
                 new_class.database = server[db_name]
             except client.ResourceNotFound:
@@ -93,9 +97,9 @@ class CouchField(object):
 
 
 class BaseCouchModel(object):
-    def __init__(self, document_id):
+    def __init__(self, document_id, **kwargs):
         self.doc = self.database[document_id]
-        model = self._meta.schema
+        model = self._divan.schema
         self.groups = {}
         self.fields = []
         for field in model.objects.order_by('group', 'order'):
@@ -106,12 +110,17 @@ class BaseCouchModel(object):
                 val = self.doc[field.key]
             except KeyError:
                 continue
-            if val and field.field_type in ('DateField', 'DateTimeField', 'TimeField'):
-                val = from_timestamp(val)
+            cls_name = field.field_type 
+            divan = self._divan
+            print cls_name, divan
+            if hasattr(divan, cls_name) and val:
+                func = getattr(divan, cls_name)
+                val = func(val)
             setattr(self, field.key, val)
             cf = CouchField(val, field.field_name)
             self.fields.append(cf)
             self.groups[group].append(cf)
+
 
 
 class CouchModel(BaseCouchModel):

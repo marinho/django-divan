@@ -72,9 +72,9 @@ class CouchDateTimeFieldTestCase(TestCase):
         except TypeError, e:
             self.fail(e)
         obj = Example(document_id=doc.id)
-        self.assertEquals(obj.date_and_time.value, now)
-        self.assertEquals(obj.date.value, today)
-        self.assertEquals(obj.time.value, timeslot)
+        self.assertEquals(obj.date_and_time, now)
+        self.assertEquals(obj.date, today)
+        self.assertEquals(obj.time, timeslot)
         
     
 
@@ -93,7 +93,7 @@ class CouchModelTestCase(TestCase):
         example = Example(doc_id)
         for field in example.fields:
             example_option = ExampleOption.objects.get(field_name=field.label)
-            self.assertEquals(getattr(example, example_option.key).label, example_option.field_name)
+            self.assertEquals(field.label, example_option.field_name)
         for group, fields in example.groups.iteritems():
             self.assertTrue(group in ('meat', 'vegetarian'))
             self.assertEquals(len(fields), 2)

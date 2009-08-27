@@ -6,6 +6,7 @@ from django.utils.datastructures import SortedDict
 from django.utils.translation import ugettext as _
 from django.forms.widgets import media_property
 from couchdb import Server, client
+from divan.models import BaseOption
 from divan.timestamps import from_timestamp, to_timestamp
 
 DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 
@@ -32,11 +33,14 @@ def get_saved_fields(model, groups):
 
 def save_document(form, document_id, fields=None):
     cleaned_data = form.cleaned_data
-    data = cleaned_data.copy()
     db = form.database
-    for k, v in data.items():
-        if isinstance(v, (date, time, datetime)):
-            cleaned_data[k] = to_timestamp(v)
+    #for field_type in [ft[0] for ft in BaseOption.FIELD_TYPE_OPTIONS]:
+    #    if hasattr(new_class._divan, 
+    for k, v in [(k, form.fields[k]) for k in cleaned_data.keys() if form.fields.has_key(k)]:
+        cls_name = v.__class__.__name__
+        divan = form._divan
+        if hasattr(divan, cls_name) and cleaned_data[k] is not None:
+            cleaned_data[k] = getattr(divan, cls_name)(cleaned_data[k])
     if document_id is not None:
         document = db[document_id]
         for k, v in cleaned_data.items():
@@ -54,8 +58,9 @@ class SQLFieldsMetaclass(type):
                      cls).__new__(cls, name, bases, attrs)
         if 'media' not in attrs:
             new_class.media = media_property(new_class)
-        opts = new_class._meta = getattr(new_class, 'Meta', None)
+        opts = getattr(new_class, 'Divan', None)
         if opts is not None:
+            new_class._divan = opts() 
             model = opts.model
             groups = getattr(opts, 'groups', None) 
             base_fields = get_saved_fields(model, groups)
@@ -63,6 +68,9 @@ class SQLFieldsMetaclass(type):
             server_address = getattr(opts, 'server', None) or DEFAULT_COUCH_SERVER
             server = Server(server_address)
             db_name = getattr(model._divan, 'database', None) or settings.DEFAULT_COUCH_DATABASE
+            for f in ('DateField', 'DateTimeField', 'TimeField'):
+                if not hasattr(new_class._divan, f):
+                    setattr(new_class._divan, f, to_timestamp)
             try:
                 new_class.database = server[db_name]
             except client.ResourceNotFound:

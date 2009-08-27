@@ -9,5 +9,5 @@ class ExampleOption(BaseOption):
 
 
 class Example(CouchModel):
-    class Meta:
+    class Divan:
         schema = ExampleOption
