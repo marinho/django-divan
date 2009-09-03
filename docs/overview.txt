@@ -57,8 +57,33 @@ order
 
 ``BaseOption`` subclasses also define an inner ``Divan`` class with a
 ``database`` attribute, set to the name of the CouchDB database in which the
-objects will be created.  If this class is not defined, Divan will look for
+objects will be created.  
+
+   class FooOption(BaseOption):
+       class Divan:
+           database = 'foo'
+
+If this class is not defined, Divan will look for
 ``settings.DEFAULT_COUCH_DATABASE``, and otherwise throw an error.
+
+Dealing with multiple choice fields
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you need to support multiple choice fields, you'll have to subclass
+``divan.models.OptionChoice`` and add another declaration to the ``Divan``
+inner class of your ``BaseOption`` subclass like so:
+
+    class FooOption(BaseOption):
+        class Divan:
+            database = 'foo'
+            choice_related_name = 'bar_set'
+
+    class Bar(OptionChoice):
+        option = models.ForeignKey(FooOption)
+
+The name of the foreign key field does not matter.  What does matter is that
+the ``choice_related_name`` declaration matches the name of the related manager
+for that object.
 
 
 Forms for the user-defined fields
@@ -68,21 +93,27 @@ Subclasses of the ``CouchForm`` class provided in ``divan.forms`` declare a
 couple of attributes that provide the bridge between CouchDB and the SQL
 database:
 
-    class ExampleOption(BaseOption):
+    class FooOption(BaseOption):
         pass
 
-    class ExampleForm(CouchForm):
-        class Meta:
-            model = ExampleOption
-            server = 'http://myserver.com:5984/'
+    class FooForm(CouchForm):
+        class Divan:
+            model = FooOption
             groups = ['address data']
+            IntegerField = {
+                'in': lambda i: '%015d' % i,
+                'out': lambda s: int(s)
+            }
 
-If not defined, ``server`` will default either to settings.DEFAULT_COUCH_SERVER
-or CouchDB's own default, which is http://localhost:5984/.
 
 The fields added to the form will be filtered by the group strings that are
 assigned as a list to ``group``.  If ``group`` is not defined, a field will be
 created for every instance of ``model``.
+
+Any of the supported field types may have default serializer/deserializer
+functions declared as in the example given above -- you might want to pad
+``int``s with leading zeros if you are using Lucene to drive search over
+CouchDB documents.
 
 ``CouchForm`` subclasses inherit from ``BaseForm`` with a different metaclass,
 so they have all of the goodies you expect from a Django ``Form`` subclass,
