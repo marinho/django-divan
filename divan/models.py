@@ -18,6 +18,12 @@ class OptionModelBase(models.base.ModelBase):
 class BaseOption(models.Model):
     __metaclass__ = OptionModelBase
 
+    INPUT_STANDARD = 0
+    INPUT_SELECT = 1
+    INPUT_RADIO = 2
+    INPUT_SELECT_MULTIPLE = 3
+    INPUT_SELECT_MULTIPLE_CHECKBOXES = 4
+
     FIELD_TYPE_OPTIONS = (
         ('CharField', 'Text'),
         ('IntegerField', 'Integer'),
@@ -32,6 +38,13 @@ class BaseOption(models.Model):
         ('BooleanField', 'Checkbox'),
         ('IPAddressField', 'IP address'),
     )
+    INPUT_SELECTION_CHOICES = (
+        (INPUT_STANDARD , 'Standard single input'),
+        (INPUT_SELECT, 'Select box'),
+        (INPUT_RADIO, 'Radio buttons'), 
+        (INPUT_SELECT_MULTIPLE, 'Multiple select box'), 
+        (INPUT_SELECT_MULTIPLE_CHECKBOXES, 'Multiple checkboxes'),
+    )
     key = models.CharField(max_length=255, editable=False)
     field_name = models.CharField(max_length=255)
     field_type = models.CharField(max_length=255, choices=FIELD_TYPE_OPTIONS)
@@ -39,6 +52,7 @@ class BaseOption(models.Model):
     order = models.IntegerField(editable=False)
     help_text = models.TextField(blank=True)
     required = models.BooleanField(default=False)
+    input_method = models.IntegerField(choices=INPUT_SELECTION_CHOICES, default=INPUT_STANDARD)
 
     class Meta:
         abstract = True
@@ -66,6 +80,16 @@ class BaseOption(models.Model):
         except client.ResourceNotFound:
             database = server.create(db_name)
         return database
+
+
+class OptionChoice(models.Model):
+    value = models.CharField(max_length=255)
+
+    class Meta:
+        abstract = True
+
+    def __unicode__(self):
+        return self.value
 
 
 class CouchModelMetaclass(type):

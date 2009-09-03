@@ -2,6 +2,8 @@ from datetime import date, datetime
 from django.conf import settings
 from django.test import TestCase
 from couchdb import Server
+from django_divan.divan.models import BaseOption
+from django_divan.divan.forms import field_and_kwargs
 from django_divan.example.forms import ExampleOptionForm
 from django_divan.example.models import ExampleOption, Example
 
@@ -114,3 +116,40 @@ class CouchModelTestCase(TestCase):
         doc_id = db.create(doc_dict)
         example = Example(doc_id)
         self.assertRaises(AttributeError, getattr, example, 'toast')
+
+
+class MultipleChoiceFieldTestCase(TestCase):
+    fixtures = ['multiple_choice_data.json']
+
+    def test_multiple_choice_field_creation(self):
+        form = ExampleOptionForm()
+        for f in ('spam', 'bacon', 'eggs', 'toast'):
+            self.assertTrue(f in form.fields.keys())
+            field = form.fields[f]
+            option = ExampleOption.objects.get(key=f)
+            field_class, kwargs = field_and_kwargs[option.input_method]
+            if kwargs.has_key('widget'):
+                self.assertTrue(isinstance(field.widget, kwargs['widget']))
+                self.assertTrue(isinstance(field, field_class))
+
+    def test_multiple_choice_field_serialization(self):
+        spam = ExampleOption.objects.get(key='spam').exampleoptionchoice_set.all()[0]
+        bacon = ExampleOption.objects.get(key='bacon').exampleoptionchoice_set.all()[0]
+        eggs1 = ExampleOption.objects.get(key='eggs').exampleoptionchoice_set.all()[0]
+        eggs2 = ExampleOption.objects.get(key='eggs').exampleoptionchoice_set.all()[1]
+        toast1 = ExampleOption.objects.get(key='toast').exampleoptionchoice_set.all()[0]
+        toast2 = ExampleOption.objects.get(key='toast').exampleoptionchoice_set.all()[1]
+        form = ExampleOptionForm({
+            'spam': spam.id, 
+            'bacon': bacon.id, 
+            'eggs': [eggs1.id, eggs2.id], 
+            'toast': [toast1.id, toast2.id]
+        })
+        if not form.is_valid():
+            self.fail()
+        doc = form.save()
+        self.assertEquals(doc['spam'], spam.value)
+        self.assertEquals(doc['bacon'], bacon.value)
+        self.assertEquals(doc['eggs'], [eggs1.value, eggs2.value])
+        self.assertEquals(doc['toast'], [toast1.value, toast2.value])
+

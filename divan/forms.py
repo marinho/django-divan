@@ -12,13 +12,40 @@ from divan.timestamps import from_timestamp, to_timestamp
 DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 
         'http://localhost:5984/')
 
+field_and_kwargs = {
+    BaseOption.INPUT_SELECT: (
+        forms.ModelChoiceField, {}
+    ),
+    BaseOption.INPUT_RADIO: (
+        forms.ModelChoiceField,
+        {
+            'widget': forms.RadioSelect
+        }
+    ),
+    BaseOption.INPUT_SELECT_MULTIPLE: (
+        forms.ModelMultipleChoiceField, {}
+    ),
+    BaseOption.INPUT_SELECT_MULTIPLE_CHECKBOXES: (
+        forms.ModelMultipleChoiceField,
+        {
+            'widget': forms.CheckboxSelectMultiple
+        }
+    )
+}
+
 def create_form_field(option):
-    FieldClass = getattr(forms, option.field_type)
+    kwargs = {}
+    if option.input_method == BaseOption.INPUT_STANDARD:
+        FieldClass = getattr(forms, option.field_type)
+    else:
+        FieldClass, opts = field_and_kwargs[option.input_method]
+        kwargs.update(opts)
+        kwargs['queryset'] = getattr(option, option._divan.choice_related_name).all()
     help_text = getattr(option, 'help_text', None)
     if help_text:
         help_text = _(help_text)
     return FieldClass(label=_(option.field_name), required=option.required, 
-            help_text=help_text)
+            help_text=help_text, **kwargs)
 
 def get_saved_fields(model, groups):
     if groups is None:
@@ -34,13 +61,20 @@ def get_saved_fields(model, groups):
 def save_document(form, document_id, fields=None):
     cleaned_data = form.cleaned_data
     db = form.database
-    #for field_type in [ft[0] for ft in BaseOption.FIELD_TYPE_OPTIONS]:
-    #    if hasattr(new_class._divan, 
-    for k, v in [(k, form.fields[k]) for k in cleaned_data.keys() if form.fields.has_key(k)]:
+    for k, v in [(k, form.fields[k]) for k in cleaned_data.keys() if form.fields.has_key(k) and cleaned_data.get(k)]:
         cls_name = v.__class__.__name__
         divan = form._divan
+        if isinstance(v, forms.ModelMultipleChoiceField):
+            cleaned_data[k] = [v.value for v in cleaned_data[k]]
+        elif isinstance(v, forms.ModelChoiceField): 
+            cleaned_data[k] = cleaned_data[k].value
         if hasattr(divan, cls_name) and cleaned_data[k] is not None:
-            cleaned_data[k] = getattr(divan, cls_name)(cleaned_data[k])
+            val = cleaned_data[k]
+            func = getattr(divan, cls_name)
+            if isinstance(val, list):
+                cleaned_data[k] = [func(v) for v in val]
+            else:
+                cleaned_data[k] = func(val)
     if document_id is not None:
         document = db[document_id]
         for k, v in cleaned_data.items():
