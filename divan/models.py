@@ -5,7 +5,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext as _
 from couchdb import Server, client
-from divan.timestamps import from_timestamp
+from divan.timestamps import from_timestamp, to_timestamp
 
 DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 'http://localhost:5984/')
 
@@ -103,7 +103,7 @@ class CouchModelMetaclass(type):
             db_name = getattr(opts.schema._divan, 'database', None) or settings.DEFAULT_COUCH_DATABASE
             for f in ('DateField', 'DateTimeField', 'TimeField'):
                 if not hasattr(new_class._divan, f):
-                    setattr(new_class._divan, f, from_timestamp)
+                    setattr(new_class._divan, f, {'serialize': to_timestamp, 'deserialize': from_timestamp})
             try:
                 new_class.database = server[db_name]
             except client.ResourceNotFound:
@@ -136,9 +136,8 @@ class BaseCouchModel(object):
                 continue
             cls_name = field.field_type 
             divan = self._divan
-            print cls_name, divan
             if hasattr(divan, cls_name) and val:
-                func = getattr(divan, cls_name)
+                func = getattr(divan, cls_name)['deserialize']
                 val = func(val)
             setattr(self, field.key, val)
             cf = CouchField(val, field.field_name)

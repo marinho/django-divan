@@ -33,10 +33,11 @@ field_and_kwargs = {
     )
 }
 
-def create_form_field(option):
+def create_form_field(option, divan):
     kwargs = {}
+    field_type = option.field_type
     if option.input_method == BaseOption.INPUT_STANDARD:
-        FieldClass = getattr(forms, option.field_type)
+        FieldClass = getattr(forms, field_type)
     else:
         FieldClass, opts = field_and_kwargs[option.input_method]
         kwargs.update(opts)
@@ -47,13 +48,13 @@ def create_form_field(option):
     return FieldClass(label=_(option.field_name), required=option.required, 
             help_text=help_text, **kwargs)
 
-def get_saved_fields(model, groups):
+def get_saved_fields(model, groups, divan):
     if groups is None:
         queryset = model.objects.all()
     else:
         queryset = model.objects.filter(group__in=groups)
     fields = [
-        (field.key, create_form_field(field)) 
+        (field.key, create_form_field(field, divan)) 
         for field in queryset.order_by('group', 'order')
     ]
     return SortedDict(fields)
@@ -70,7 +71,7 @@ def save_document(form, document_id, fields=None):
             cleaned_data[k] = cleaned_data[k].value
         if hasattr(divan, cls_name) and cleaned_data[k] is not None:
             val = cleaned_data[k]
-            func = getattr(divan, cls_name)
+            func = getattr(divan, cls_name)['serialize']
             if isinstance(val, list):
                 cleaned_data[k] = [func(v) for v in val]
             else:
@@ -97,14 +98,14 @@ class SQLFieldsMetaclass(type):
             new_class._divan = opts() 
             model = opts.model
             groups = getattr(opts, 'groups', None) 
-            base_fields = get_saved_fields(model, groups)
+            base_fields = get_saved_fields(model, groups, opts)
             new_class.base_fields = base_fields
             server_address = getattr(opts, 'server', None) or DEFAULT_COUCH_SERVER
             server = Server(server_address)
             db_name = getattr(model._divan, 'database', None) or settings.DEFAULT_COUCH_DATABASE
             for f in ('DateField', 'DateTimeField', 'TimeField'):
                 if not hasattr(new_class._divan, f):
-                    setattr(new_class._divan, f, to_timestamp)
+                    setattr(new_class._divan, f, {'serialize': to_timestamp, 'deserialize': from_timestamp})
             try:
                 new_class.database = server[db_name]
             except client.ResourceNotFound:
@@ -126,6 +127,11 @@ class BaseCouchForm(forms.BaseForm):
             document_data.update(initial)
         super(BaseCouchForm, self).__init__(data, files, initial=document_data,
                                             *args, **kwargs)
+        for k, v in self.fields.items():
+            if self.initial.has_key(k):
+                serial = getattr(self._divan, v.__class__.__name__, None)
+                if serial is not None:
+                    self.initial[k] = serial['deserialize'](self.initial[k])
 
     def save(self):
         return save_document(self, self.document_id, self.fields)

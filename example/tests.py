@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from django.conf import settings
 from django.test import TestCase
 from couchdb import Server
@@ -21,14 +21,14 @@ class DivanOptionTestCase(TestCase):
 
 
 class CouchFormTestCase(TestCase):
-    fixtures = ['form_test.json']
+    fixtures = ['form_test']
 
     def test_unbound_form(self):
         form = ExampleOptionForm()
         for field in form:
-            self.assertTrue(field.label in ('Foo bar', 'Baz quux', 'Date and time', 'Date', 'Time'))
+            self.assertTrue(field.label in ('Foo bar', 'Baz quux'))
         for field in form.fields.keys():
-            self.assertTrue(field in ('foo_bar', 'baz_quux', 'date_and_time', 'date', 'time')) 
+            self.assertTrue(field in ('foo_bar', 'baz_quux')) 
 
     def test_initialized_form(self):
         server = Server(DEFAULT_COUCH_SERVER)
@@ -46,12 +46,12 @@ class CouchFormTestCase(TestCase):
         self.assertTrue(form.is_valid())
         doc = form.save()
         for k, v in doc_dict.items():
-            self.assertTrue(k in doc)
+            self.assertTrue(k in doc, k)
             self.assertEquals(doc[k], v)
 
 
 class CouchDateTimeFieldTestCase(TestCase):
-    fixtures = ['datetime_field_test.json']
+    fixtures = ['datetime_field_test']
 
     def test_datetime_field(self):
         now = datetime.now()
@@ -69,6 +69,8 @@ class CouchDateTimeFieldTestCase(TestCase):
             self.assertTrue(k in form.fields.keys())
         self.assertTrue(form.is_bound)
         self.assertTrue(form.is_valid())
+        for k in ('date', 'date_and_time', 'time'):
+            self.assertTrue(isinstance(form.cleaned_data[k], (date, datetime, time)))
         try:
             doc = form.save()
         except TypeError, e:
@@ -119,7 +121,7 @@ class CouchModelTestCase(TestCase):
 
 
 class MultipleChoiceFieldTestCase(TestCase):
-    fixtures = ['multiple_choice_data.json']
+    fixtures = ['multiple_choice_data']
 
     def test_multiple_choice_field_creation(self):
         form = ExampleOptionForm()
