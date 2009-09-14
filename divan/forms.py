@@ -2,6 +2,7 @@ from datetime import date, datetime, time
 from django import forms
 from django.db.models import Q
 from django.conf import settings
+from django.utils import simplejson
 from django.utils.datastructures import SortedDict
 from django.utils.translation import ugettext as _
 from django.forms.widgets import media_property
@@ -72,8 +73,7 @@ def save_document(form, document_id, fields=None):
         if hasattr(divan, cls_name) and cleaned_data[k] is not None:
             val = cleaned_data[k]
             func = getattr(divan, cls_name)['serialize']
-            if isinstance(val, list):
-                cleaned_data[k] = [func(v) for v in val]
+            if isinstance(val, list): cleaned_data[k] = [func(v) for v in val]
             else:
                 cleaned_data[k] = func(val)
     if document_id is not None:
@@ -129,9 +129,17 @@ class BaseCouchForm(forms.BaseForm):
                                             *args, **kwargs)
         for k, v in self.fields.items():
             if self.initial.has_key(k):
-                serial = getattr(self._divan, v.__class__.__name__, None)
-                if serial is not None:
-                    self.initial[k] = serial['deserialize'](self.initial[k])
+                if isinstance(v, forms.ModelChoiceField):
+                    instance = self._divan.model.objects.get(key=k)
+                    print instance
+                    print getattr(instance, instance._divan.choice_related_name).all()
+                    # self.initial[k] = getattr(instance, instance._divan.choice_related_name).get(value=initial[k])
+                if isinstance(v, forms.ModelMultipleChoiceField):
+                    self.initial[k] = [choice.id for choice in self._divan.model.choice_set.filter(simplejson.loads(initial[k]))]
+                else:
+                    serial = getattr(self._divan, v.__class__.__name__, None)
+                    if serial is not None:
+                        self.initial[k] = serial['deserialize'](self.initial[k])
 
     def save(self):
         return save_document(self, self.document_id, self.fields)
