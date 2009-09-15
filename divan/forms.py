@@ -73,7 +73,8 @@ def save_document(form, document_id, fields=None):
         if hasattr(divan, cls_name) and cleaned_data[k] is not None:
             val = cleaned_data[k]
             func = getattr(divan, cls_name)['serialize']
-            if isinstance(val, list): cleaned_data[k] = [func(v) for v in val]
+            if isinstance(val, list): 
+                cleaned_data[k] = [func(v) for v in val]
             else:
                 cleaned_data[k] = func(val)
     if document_id is not None:
@@ -129,13 +130,14 @@ class BaseCouchForm(forms.BaseForm):
                                             *args, **kwargs)
         for k, v in self.fields.items():
             if self.initial.has_key(k):
-                if isinstance(v, forms.ModelChoiceField):
-                    instance = self._divan.model.objects.get(key=k)
-                    print instance
-                    print getattr(instance, instance._divan.choice_related_name).all()
-                    # self.initial[k] = getattr(instance, instance._divan.choice_related_name).get(value=initial[k])
                 if isinstance(v, forms.ModelMultipleChoiceField):
-                    self.initial[k] = [choice.id for choice in self._divan.model.choice_set.filter(simplejson.loads(initial[k]))]
+                    instance = self._divan.model.objects.get(key=k)
+                    value_list = document_data[k]
+                    self.initial[k] = [choice.id for choice in getattr(instance, instance._divan.choice_related_name).filter(value__in=value_list)]
+                elif isinstance(v, forms.ModelChoiceField):
+                    instance = self._divan.model.objects.get(key=k)
+                    value = document_data[k]
+                    self.initial[k] = getattr(instance, instance._divan.choice_related_name).get(value=value).id
                 else:
                     serial = getattr(self._divan, v.__class__.__name__, None)
                     if serial is not None:
