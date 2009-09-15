@@ -7,6 +7,7 @@ from django.utils.translation import ugettext as _
 from couchdb import Server, client
 from divan.timestamps import from_timestamp, to_timestamp
 
+
 DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 'http://localhost:5984/')
 
 class OptionModelBase(models.base.ModelBase):
@@ -23,6 +24,7 @@ class BaseOption(models.Model):
     INPUT_RADIO = 2
     INPUT_SELECT_MULTIPLE = 3
     INPUT_SELECT_MULTIPLE_CHECKBOXES = 4
+    INPUT_TINYMCE = 5
 
     FIELD_TYPE_OPTIONS = (
         ('CharField', 'Text'),
@@ -40,6 +42,7 @@ class BaseOption(models.Model):
     )
     INPUT_SELECTION_CHOICES = (
         (INPUT_STANDARD , 'Standard single input'),
+        (INPUT_TINYMCE, 'WYSIWYG editor'),
         (INPUT_SELECT, 'Select box'),
         (INPUT_RADIO, 'Radio buttons'), 
         (INPUT_SELECT_MULTIPLE, 'Multiple select box'), 

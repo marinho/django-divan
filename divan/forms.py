@@ -10,12 +10,22 @@ from couchdb import Server, client
 from divan.models import BaseOption
 from divan.timestamps import from_timestamp, to_timestamp
 
+try:
+    from tinymce.widgets import TinyMCE
+except ImportError:
+    TinyMCE = forms.Textarea
+
 DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 
         'http://localhost:5984/')
 
 field_and_kwargs = {
     BaseOption.INPUT_SELECT: (
         forms.ModelChoiceField, {}
+    ),
+    BaseOption.INPUT_TINYMCE: (
+        forms.CharField, {
+            'widget': TinyMCE    
+        }
     ),
     BaseOption.INPUT_RADIO: (
         forms.ModelChoiceField,
@@ -42,7 +52,8 @@ def create_form_field(option, divan):
     else:
         FieldClass, opts = field_and_kwargs[option.input_method]
         kwargs.update(opts)
-        kwargs['queryset'] = getattr(option, option._divan.choice_related_name).all()
+        if option.input_method != BaseOption.INPUT_TINYMCE:
+            kwargs['queryset'] = getattr(option, option._divan.choice_related_name).all()
     help_text = getattr(option, 'help_text', None)
     if help_text:
         help_text = _(help_text)
