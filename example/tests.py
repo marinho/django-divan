@@ -155,3 +155,24 @@ class MultipleChoiceFieldTestCase(TestCase):
         self.assertEquals(doc['eggs'], [eggs1.value, eggs2.value])
         self.assertEquals(doc['toast'], [toast1.value, toast2.value])
 
+    def test_multiple_choice_initial_values(self):
+        spam = ExampleOption.objects.get(key='spam').exampleoptionchoice_set.all()[0]
+        bacon = ExampleOption.objects.get(key='bacon').exampleoptionchoice_set.all()[0]
+        eggs1 = ExampleOption.objects.get(key='eggs').exampleoptionchoice_set.all()[0]
+        eggs2 = ExampleOption.objects.get(key='eggs').exampleoptionchoice_set.all()[1]
+        toast1 = ExampleOption.objects.get(key='toast').exampleoptionchoice_set.all()[0]
+        toast2 = ExampleOption.objects.get(key='toast').exampleoptionchoice_set.all()[1]
+        data = {
+            'spam': spam.id, 
+            'bacon': bacon.id, 
+            'eggs': [eggs1.id, eggs2.id], 
+            'toast': [toast1.id, toast2.id]
+        }
+        form = ExampleOptionForm(data)
+        if not form.is_valid():
+            self.fail()
+        doc = form.save()
+        new_form = ExampleOptionForm(document=doc)
+        for k, v in new_form.initial.items():
+            self.assertEquals(v, data[k])
+
