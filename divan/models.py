@@ -147,6 +147,9 @@ class BaseCouchModel(object):
             self.fields.append(cf)
             self.groups[group].append(cf)
 
+    def __iter__(self):
+        return iter(self.fields)
+
 
 
 class CouchModel(BaseCouchModel):
