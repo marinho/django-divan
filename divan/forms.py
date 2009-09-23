@@ -93,6 +93,8 @@ def save_document(form, document_id, fields=None):
         for k, v in cleaned_data.items():
             if v:
                 document[k] = v
+            else:
+                document.pop(k, None)
         db[document_id] = document
     else:
         doc_id = db.create(cleaned_data)
