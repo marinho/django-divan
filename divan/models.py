@@ -1,14 +1,14 @@
 import re
 from datetime import date, datetime, time
+from couchdb import Server
 
 from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext as _
-from couchdb import Server, client
+
+from divan import server, db
 from divan.timestamps import from_timestamp, to_timestamp
 
-
-DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 'http://localhost:5984/')
 
 class OptionModelBase(models.base.ModelBase):
     def __init__(cls, name, bases, attrs):
@@ -75,13 +75,18 @@ class BaseOption(models.Model):
 
     @classmethod
     def couchdb(self):
-        server_address = getattr(self._divan, 'server', None) or DEFAULT_COUCH_SERVER
-        server = Server(server_address)
-        db_name = getattr(self._divan, 'database', None) or settings.DEFAULT_COUCH_DATABASE
+        if db is not None:
+            return db
+        server_address = getattr(self._divan, 'server', None)
+        if server_address is not None:
+            _server = Server(server_address)
+        else:
+            _server = server
+        db_name = getattr(self._divan, 'database')
         try:
-            database = server[db_name]
+            database = _server[db_name]
         except client.ResourceNotFound:
-            database = server.create(db_name)
+            database = _server.create(db_name)
         return database
 
 
@@ -101,16 +106,20 @@ class CouchModelMetaclass(type):
         opts = getattr(new_class, 'Divan', None)
         if opts is not None:
             new_class._divan = opts() 
-            server_address = getattr(opts, 'server', None) or DEFAULT_COUCH_SERVER
-            server = Server(server_address)
-            db_name = getattr(opts.schema._divan, 'database', None) or settings.DEFAULT_COUCH_DATABASE
+            server_address = getattr(opts, 'server', None)
+            if server_address is not None:
+                _server = Server(server_address)
+            else:
+                _server = server
+            db_name = getattr(new_class._divan, 'database', None)
+            if db_name is not None:
+                try:
+                    new_class.database = _server[db_name]
+                except client.ResourceNotFound:
+                    new_class.database = _server.create(db_name)
             for f in ('DateField', 'DateTimeField', 'TimeField'):
                 if not hasattr(new_class._divan, f):
                     setattr(new_class._divan, f, {'serialize': to_timestamp, 'deserialize': from_timestamp})
-            try:
-                new_class.database = server[db_name]
-            except client.ResourceNotFound:
-                new_class.database = server.create(db_name)
         return new_class
 
 
@@ -124,8 +133,8 @@ class CouchField(object):
 
 
 class BaseCouchModel(object):
-    def __init__(self, document_id, **kwargs):
-        self.doc = self.database[document_id]
+    def __init__(self, document, **kwargs):
+        self.doc = document
         model = self._divan.schema
         self.groups = {}
         self.fields = []

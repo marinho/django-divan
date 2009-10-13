@@ -116,7 +116,7 @@ class CouchModelTestCase(TestCase):
         db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5}
         doc_id = db.create(doc_dict)
-        example = Example(doc_id)
+        example = Example(db[doc_id])
         self.assertRaises(AttributeError, getattr, example, 'toast')
 
 

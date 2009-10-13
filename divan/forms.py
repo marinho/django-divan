@@ -2,11 +2,13 @@ from datetime import date, datetime, time
 from django import forms
 from django.db.models import Q
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.utils import simplejson
 from django.utils.datastructures import SortedDict
 from django.utils.translation import ugettext as _
 from django.forms.widgets import media_property
 from couchdb import Server, client
+from divan import server, db
 from divan.models import BaseOption
 from divan.timestamps import from_timestamp, to_timestamp
 
@@ -15,8 +17,6 @@ try:
 except ImportError:
     TinyMCE = forms.Textarea
 
-DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 
-        'http://localhost:5984/')
 
 field_and_kwargs = {
     BaseOption.INPUT_SELECT: (
@@ -114,16 +114,24 @@ class SQLFieldsMetaclass(type):
             groups = getattr(opts, 'groups', None) 
             base_fields = get_saved_fields(model, groups, opts)
             new_class.base_fields = base_fields
-            server_address = getattr(opts, 'server', None) or DEFAULT_COUCH_SERVER
-            server = Server(server_address)
-            db_name = getattr(model._divan, 'database', None) or settings.DEFAULT_COUCH_DATABASE
+            server_address = getattr(opts, 'server', None)
+            if server_address is not None:
+                _server = Server(server_address)
+            else:
+                _server = server
+            db_name = getattr(model._divan, 'database', None)
+            if db_name is not None:
+                try:
+                    new_class.database = _server[db_name]
+                except client.ResourceNotFound:
+                    new_class.database = _server.create(db_name)
+            else:
+                if db is None:
+                    raise ImproperlyConfigured('No CouchDB database declared')
+                new_class.database = db
             for f in ('DateField', 'DateTimeField', 'TimeField'):
                 if not hasattr(new_class._divan, f):
                     setattr(new_class._divan, f, {'serialize': to_timestamp, 'deserialize': from_timestamp})
-            try:
-                new_class.database = server[db_name]
-            except client.ResourceNotFound:
-                new_class.database = server.create(db_name)
         return new_class
 
 
