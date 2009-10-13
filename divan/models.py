@@ -148,7 +148,13 @@ class BaseCouchModel(object):
                 continue
             cls_name = field.field_type 
             divan = self._divan
-            if hasattr(divan, cls_name) and val:
+            if isinstance(val, list) and hasattr(divan, 'format_list'):
+                format_list = getattr(self, getattr(divan, 'format_list'))
+                if hasattr(divan, cls_name) and val:
+                    func = getattr(divan, cls_name)['deserialize']
+                    val = [func(v) for v in val]
+                val = format_list(val)
+            elif hasattr(divan, cls_name) and val:
                 func = getattr(divan, cls_name)['deserialize']
                 val = func(val)
             setattr(self, field.key, val)
