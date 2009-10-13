@@ -79,5 +79,3 @@ INSTALLED_APPS = (
     'django_divan.divan',
     'django_divan.example',
 )
-
-DEFAULT_COUCH_SERVER = 'http://192.168.1.15:5984'
