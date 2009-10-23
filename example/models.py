@@ -16,3 +16,4 @@ class ExampleOptionChoice(OptionChoice):
 class Example(CouchModel):
     class Divan:
         schema = ExampleOption
+        groups = ['meat', 'vegetarian'] 

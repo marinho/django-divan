@@ -106,6 +106,23 @@ class CouchModelMetaclass(type):
         opts = getattr(new_class, 'Divan', None)
         if opts is not None:
             new_class._divan = opts() 
+            groups = getattr(opts, 'groups', None) 
+            if groups is None:
+                schema = new_class._divan.schema
+                exclude = getattr(opts, 'exclude', None)
+                if exclude is None:
+                    new_class._divan.groups = list(set([
+                        option.group 
+                        for option in schema.objects.all()
+                    ]))
+                    print new_class._divan.groups
+                else:
+                    new_class._divan.groups = list(set([
+                        option.group 
+                        for option in schema.objects.exclude(group__in=exclude)
+                    ]))
+            else:
+                new_class._divan.groups = groups
             server_address = getattr(opts, 'server', None)
             if server_address is not None:
                 _server = Server(server_address)
@@ -136,12 +153,9 @@ class BaseCouchModel(object):
     def __init__(self, document, **kwargs):
         self.doc = document
         model = self._divan.schema
-        self.groups = {}
+        self.groups = dict((group, []) for group in self._divan.groups)
         self.fields = []
         for field in model.objects.order_by('group', 'order'):
-            group = field.group
-            if not self.groups.has_key(group):
-                self.groups[field.group] = []
             try:
                 val = self.doc[field.key]
             except KeyError:
@@ -160,7 +174,9 @@ class BaseCouchModel(object):
             setattr(self, field.key, val)
             cf = CouchField(val, field.field_name)
             self.fields.append(cf)
-            self.groups[group].append(cf)
+            group = field.group
+            if self.groups.has_key(group):
+                self.groups[group].append(cf)
 
     def __iter__(self):
         return iter(self.fields)

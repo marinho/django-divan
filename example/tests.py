@@ -88,13 +88,14 @@ class CouchModelTestCase(TestCase):
         ExampleOption.objects.create(field_name='Bacon', field_type='BooleanField', group='meat')
         ExampleOption.objects.create(field_name='Eggs', field_type='IntegerField', group='vegetarian')
         ExampleOption.objects.create(field_name='Toast', field_type='FloatField', group='vegetarian')
+        ExampleOption.objects.create(field_name='Rice', field_type='FloatField', group='vegan')
 
     def test_iterate_over_fields(self):
         server = Server(DEFAULT_COUCH_SERVER)
         db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5, 'toast': 0.456}
         doc_id = db.create(doc_dict)
-        example = Example(doc_id)
+        example = Example(db[doc_id])
         for field in example.fields:
             example_option = ExampleOption.objects.get(field_name=field.label)
             self.assertEquals(field.label, example_option.field_name)
@@ -107,7 +108,7 @@ class CouchModelTestCase(TestCase):
         db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5, 'toast': 0.456, 'juice': 10}
         doc_id = db.create(doc_dict)
-        example = Example(doc_id)
+        example = Example(db[doc_id])
         self.assertRaises(AttributeError, getattr, example, 'juice')
         self.assertTrue(hasattr(example, 'spam'))
 
@@ -118,6 +119,16 @@ class CouchModelTestCase(TestCase):
         doc_id = db.create(doc_dict)
         example = Example(db[doc_id])
         self.assertRaises(AttributeError, getattr, example, 'toast')
+
+    def test_doc_has_attr_but_not_group(self):
+        server = Server(DEFAULT_COUCH_SERVER)
+        db = server['example']
+        doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5, 'toast': 0.456, 'juice': 10, 'rice': 4.4}
+        doc_id = db.create(doc_dict)
+        example = Example(db[doc_id])
+        self.assertFalse(example.groups.has_key('vegan'))
+        self.assertTrue(hasattr(example, 'rice'))
+
 
 
 class MultipleChoiceFieldTestCase(TestCase):
@@ -175,4 +186,3 @@ class MultipleChoiceFieldTestCase(TestCase):
         new_form = ExampleOptionForm(document=doc)
         for k, v in new_form.initial.items():
             self.assertEquals(v, data[k])
-
