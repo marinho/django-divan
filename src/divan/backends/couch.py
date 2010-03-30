@@ -23,7 +23,7 @@ class CouchDB(BaseDivanBackend):
 
     def connect(self, database, host, port):
         server = Server('http://%s:%s' % (host, port))
-        self.db = server[database]
+        return server[database]
 
     def create(self, data):
         doc_id = self.db.create(data)

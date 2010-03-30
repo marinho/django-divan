@@ -10,7 +10,7 @@ class BaseDivanBackend(object):
         self.database = database
         self.host = host or self.default_host
         self.port = port or self.default_port
-        self.connect(self.database, self.host, self.port)
+        self.db = self.connect(self.database, self.host, self.port)
 
     def get_value_for_field(self, document, field):
         """Fetches a value for a given document and a given field.  Subclasses
