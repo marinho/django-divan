@@ -127,7 +127,7 @@ class SQLFieldsMetaclass(type):
                     new_class.database = _server.create(db_name)
             else:
                 if db is None:
-                    raise ImproperlyConfigured('No CouchDB database declared')
+                    raise ImproperlyConfigured('No Divan database declared')
                 new_class.database = db
             for f in ('DateField', 'DateTimeField', 'TimeField'):
                 if not hasattr(new_class._divan, f):
@@ -135,7 +135,7 @@ class SQLFieldsMetaclass(type):
         return new_class
 
 
-class BaseCouchForm(forms.BaseForm):
+class BaseDivanForm(forms.BaseForm):
     def __init__(self, data=None, files=None, document=None, initial=None, *args, **kwargs):
         document_data = {}
         if document is None:
@@ -147,7 +147,7 @@ class BaseCouchForm(forms.BaseForm):
                     document_data[k] = v
         if initial is not None:
             document_data.update(initial)
-        super(BaseCouchForm, self).__init__(data, files, initial=document_data,
+        super(BaseDivanForm, self).__init__(data, files, initial=document_data,
                                             *args, **kwargs)
         for k, v in self.fields.items():
             if self.initial.has_key(k):
@@ -168,5 +168,5 @@ class BaseCouchForm(forms.BaseForm):
         return save_document(self, self.document_id, self.fields)
 
 
-class CouchForm(BaseCouchForm):
+class DivanForm(BaseDivanForm):
     __metaclass__ = SQLFieldsMetaclass

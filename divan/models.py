@@ -100,9 +100,9 @@ class OptionChoice(models.Model):
         return self.value
 
 
-class CouchModelMetaclass(type):
+class DivanModelMetaclass(type):
     def __new__(cls, name, bases, dict):
-        new_class = super(CouchModelMetaclass, cls).__new__(cls, name, bases, dict)
+        new_class = super(DivanModelMetaclass, cls).__new__(cls, name, bases, dict)
         opts = getattr(new_class, 'Divan', None)
         if opts is not None:
             new_class._divan = opts() 
@@ -140,7 +140,7 @@ class CouchModelMetaclass(type):
         return new_class
 
 
-class CouchField(object):
+class DivanField(object):
     def __init__(self, val, label):
         self.value = val
         self.label = label
@@ -149,7 +149,7 @@ class CouchField(object):
         return unicode(self.value)
 
 
-class BaseCouchModel(object):
+class BaseDivanModel(object):
     def __init__(self, document, **kwargs):
         self.doc = document
         model = self._divan.schema
@@ -172,7 +172,7 @@ class BaseCouchModel(object):
                 func = getattr(divan, cls_name)['deserialize']
                 val = func(val)
             setattr(self, field.key, val)
-            cf = CouchField(val, field.field_name)
+            cf = DivanField(val, field.field_name)
             self.fields.append(cf)
             group = field.group
             if self.groups.has_key(group):
@@ -183,5 +183,5 @@ class BaseCouchModel(object):
 
 
 
-class CouchModel(BaseCouchModel):
-    __metaclass__ = CouchModelMetaclass
+class DivanModel(BaseDivanModel):
+    __metaclass__ = DivanModelMetaclass

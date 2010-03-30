@@ -1,5 +1,5 @@
 from django.db import models
-from django_divan.divan.models import BaseOption, CouchModel, OptionChoice
+from django_divan.divan.models import BaseOption, DivanModel, OptionChoice
 
 class ExampleOption(BaseOption):
     active = models.BooleanField()
@@ -13,7 +13,7 @@ class ExampleOptionChoice(OptionChoice):
     option = models.ForeignKey(ExampleOption)
 
 
-class Example(CouchModel):
+class Example(DivanModel):
     class Divan:
         schema = ExampleOption
         groups = ['meat', 'vegetarian'] 

@@ -21,7 +21,7 @@ except NameError:
 # still sensible for us to use it, since subprocess didn't exist in 2.3.
 warnings.filterwarnings('ignore', category=DeprecationWarning, message=r'os\.popen3')
 
-DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 
+DEFAULT_DIVAN_SERVER = getattr(settings, 'DEFAULT_DIVAN_SERVER', 
         'http://localhost:5984/')
 
 def make_messages(locale=None, verbosity=1, fieldstrings='all'):
@@ -142,9 +142,9 @@ class Command(BaseCommand):
         make_option('--locale', '-l', default=None, dest='locale',
             help='Creates or updates the message files only for the given locale (e.g. pt_BR).'),
         make_option('--fieldstrings', '-f', default=None, dest='locale',
-            help='Determines what strings are pulled from CouchDB. Options: "all", "helptext", "fieldnames", "values"'),
+            help='Determines what strings are pulled from the Divan database. Options: "all", "helptext", "fieldnames", "values"'),
     )
-    help = "Creates/updates .po files for BaseOption subclass strings and all CouchDB documents with matching keys."
+    help = "Creates/updates .po files for BaseOption subclass strings and all Divan documents with matching keys."
 
     requires_model_validation = False
     can_import_settings = False

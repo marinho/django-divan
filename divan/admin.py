@@ -1,4 +1,4 @@
 from django.contrib import admin
 
-class CouchAdmin(admin.ModelAdmin):
+class DivanAdmin(admin.ModelAdmin):
     pass

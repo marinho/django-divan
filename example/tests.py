@@ -7,7 +7,7 @@ from django_divan.divan.forms import field_and_kwargs
 from django_divan.example.forms import ExampleOptionForm
 from django_divan.example.models import ExampleOption, Example
 
-DEFAULT_COUCH_SERVER = getattr(settings, 'DEFAULT_COUCH_SERVER', 'http://localhost:5984/')
+DEFAULT_DIVAN_SERVER = getattr(settings, 'DEFAULT_DIVAN_SERVER', 'http://localhost:5984/')
 
 
 class DivanOptionTestCase(TestCase):
@@ -20,7 +20,7 @@ class DivanOptionTestCase(TestCase):
         self.assertEquals(option.key, 'admissions_contact_name')
 
 
-class CouchFormTestCase(TestCase):
+class DivanFormTestCase(TestCase):
     fixtures = ['form_test']
 
     def test_unbound_form(self):
@@ -31,7 +31,7 @@ class CouchFormTestCase(TestCase):
             self.assertTrue(field in ('foo_bar', 'baz_quux')) 
 
     def test_initialized_form(self):
-        server = Server(DEFAULT_COUCH_SERVER)
+        server = Server(DEFAULT_DIVAN_SERVER)
         db = server['example']
         doc_dict = {'foo_bar': 'Spam, spam, spam', 'baz_quux': False}
         doc_id = db.create(doc_dict)
@@ -50,7 +50,7 @@ class CouchFormTestCase(TestCase):
             self.assertEquals(doc[k], v)
 
 
-class CouchDateTimeFieldTestCase(TestCase):
+class DivanDateTimeFieldTestCase(TestCase):
     fixtures = ['datetime_field_test']
 
     def test_datetime_field(self):
@@ -82,7 +82,7 @@ class CouchDateTimeFieldTestCase(TestCase):
         
     
 
-class CouchModelTestCase(TestCase):
+class DivanModelTestCase(TestCase):
     def setUp(self):
         ExampleOption.objects.create(field_name='Spam', field_type='CharField', group='meat')
         ExampleOption.objects.create(field_name='Bacon', field_type='BooleanField', group='meat')
@@ -91,7 +91,7 @@ class CouchModelTestCase(TestCase):
         ExampleOption.objects.create(field_name='Rice', field_type='FloatField', group='vegan')
 
     def test_iterate_over_fields(self):
-        server = Server(DEFAULT_COUCH_SERVER)
+        server = Server(DEFAULT_DIVAN_SERVER)
         db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5, 'toast': 0.456}
         doc_id = db.create(doc_dict)
@@ -104,7 +104,7 @@ class CouchModelTestCase(TestCase):
             self.assertEquals(len(fields), 2)
 
     def test_doc_has_extra_keys(self):
-        server = Server(DEFAULT_COUCH_SERVER)
+        server = Server(DEFAULT_DIVAN_SERVER)
         db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5, 'toast': 0.456, 'juice': 10}
         doc_id = db.create(doc_dict)
@@ -113,7 +113,7 @@ class CouchModelTestCase(TestCase):
         self.assertTrue(hasattr(example, 'spam'))
 
     def test_doc_has_missing_values(self):
-        server = Server(DEFAULT_COUCH_SERVER)
+        server = Server(DEFAULT_DIVAN_SERVER)
         db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5}
         doc_id = db.create(doc_dict)
@@ -121,7 +121,7 @@ class CouchModelTestCase(TestCase):
         self.assertRaises(AttributeError, getattr, example, 'toast')
 
     def test_doc_has_attr_but_not_group(self):
-        server = Server(DEFAULT_COUCH_SERVER)
+        server = Server(DEFAULT_DIVAN_SERVER)
         db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5, 'toast': 0.456, 'juice': 10, 'rice': 4.4}
         doc_id = db.create(doc_dict)
