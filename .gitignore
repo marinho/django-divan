@@ -1,3 +1,16 @@
 *.pyc
 *.swp
 test.db
+*~
+db
+settings.py
+.installed.cfg
+.mr.developer.cfg
+bin
+develop-eggs
+dist
+downloads
+eggs
+parts
+src
+docs/_build
