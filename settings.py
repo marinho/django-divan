@@ -79,3 +79,6 @@ INSTALLED_APPS = (
     'django_divan.divan',
     'django_divan.example',
 )
+
+DIVAN_BACKEND = 'divan.backends.couchdb.CouchDB'
+DIVAN_DATABASE = 'test'

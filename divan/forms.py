@@ -8,9 +8,8 @@ from django.utils.datastructures import SortedDict
 from django.utils.translation import ugettext as _
 from django.forms.widgets import media_property
 from couchdb import Server, client
-from divan import server, db
+from divan import db
 from divan.models import BaseOption
-from divan.timestamps import from_timestamp, to_timestamp
 
 try:
     from tinymce.widgets import TinyMCE
@@ -89,16 +88,9 @@ def save_document(form, document_id, fields=None):
             else:
                 cleaned_data[k] = func(val)
     if document_id is not None:
-        document = db[document_id]
-        for k, v in cleaned_data.items():
-            if v:
-                document[k] = v
-            else:
-                document.pop(k, None)
-        db[document_id] = document
+        document = db.update(document_id, cleaned_data)
     else:
-        doc_id = db.create(cleaned_data)
-        document = db[doc_id]
+        document = db.create(cleaned_data)
     return document
 
 class SQLFieldsMetaclass(type):
@@ -114,24 +106,10 @@ class SQLFieldsMetaclass(type):
             groups = getattr(opts, 'groups', None) 
             base_fields = get_saved_fields(model, groups, opts)
             new_class.base_fields = base_fields
-            server_address = getattr(opts, 'server', None)
-            if server_address is not None:
-                _server = Server(server_address)
-            else:
-                _server = server
-            db_name = getattr(model._divan, 'database', None)
-            if db_name is not None:
-                try:
-                    new_class.database = _server[db_name]
-                except client.ResourceNotFound:
-                    new_class.database = _server.create(db_name)
-            else:
-                if db is None:
-                    raise ImproperlyConfigured('No Divan database declared')
-                new_class.database = db
-            for f in ('DateField', 'DateTimeField', 'TimeField'):
-                if not hasattr(new_class._divan, f):
-                    setattr(new_class._divan, f, {'serialize': to_timestamp, 'deserialize': from_timestamp})
+            new_class.database = db
+            for field_type, serializers in db.default_serializers.items():
+                if not hasattr(new_class._divan, field_type):
+                    setattr(new_class._divan, field_type, serializers)
         return new_class
 
 
@@ -141,9 +119,9 @@ class BaseDivanForm(forms.BaseForm):
         if document is None:
             self.document_id = None
         else:
-            self.document_id = document['_id']
+            self.document_id = db.get_id(document)
             for k, v in document.iteritems():
-                if k not in ('_id', '_rev'):
+                if k not in db.exclude_keys:
                     document_data[k] = v
         if initial is not None:
             document_data.update(initial)

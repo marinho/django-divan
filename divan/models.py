@@ -1,12 +1,11 @@
 import re
 from datetime import date, datetime, time
-from couchdb import Server
 
 from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext as _
 
-from divan import server, db
+from divan import db
 from divan.timestamps import from_timestamp, to_timestamp
 
 
@@ -74,20 +73,8 @@ class BaseOption(models.Model):
         super(BaseOption, self).save(*args, **kwargs)
 
     @classmethod
-    def couchdb(self):
-        if db is not None:
-            return db
-        server_address = getattr(self._divan, 'server', None)
-        if server_address is not None:
-            _server = Server(server_address)
-        else:
-            _server = server
-        db_name = getattr(self._divan, 'database')
-        try:
-            database = _server[db_name]
-        except client.ResourceNotFound:
-            database = _server.create(db_name)
-        return database
+    def db(self):
+        return db
 
 
 class OptionChoice(models.Model):
@@ -115,7 +102,6 @@ class DivanModelMetaclass(type):
                         option.group 
                         for option in schema.objects.all()
                     ]))
-                    print new_class._divan.groups
                 else:
                     new_class._divan.groups = list(set([
                         option.group 
@@ -123,20 +109,9 @@ class DivanModelMetaclass(type):
                     ]))
             else:
                 new_class._divan.groups = groups
-            server_address = getattr(opts, 'server', None)
-            if server_address is not None:
-                _server = Server(server_address)
-            else:
-                _server = server
-            db_name = getattr(new_class._divan, 'database', None)
-            if db_name is not None:
-                try:
-                    new_class.database = _server[db_name]
-                except client.ResourceNotFound:
-                    new_class.database = _server.create(db_name)
-            for f in ('DateField', 'DateTimeField', 'TimeField'):
-                if not hasattr(new_class._divan, f):
-                    setattr(new_class._divan, f, {'serialize': to_timestamp, 'deserialize': from_timestamp})
+            for field_type, serializers in db.default_serializers.items():
+                if not hasattr(new_class._divan, field_type):
+                    setattr(new_class._divan, field_type, serializers)
         return new_class
 
 
@@ -157,8 +132,8 @@ class BaseDivanModel(object):
         self.fields = []
         for field in model.objects.order_by('group', 'order'):
             try:
-                val = self.doc[field.key]
-            except KeyError:
+                val = db.get_value_for_field(document, field.key)
+            except AttributeError:
                 continue
             cls_name = field.field_type 
             divan = self._divan
@@ -180,7 +155,6 @@ class BaseDivanModel(object):
 
     def __iter__(self):
         return iter(self.fields)
-
 
 
 class DivanModel(BaseDivanModel):
