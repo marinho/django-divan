@@ -1,5 +1,5 @@
-from django_divan.divan.forms import DivanForm
-from django_divan.example.models import ExampleOption
+from divan.forms import DivanForm
+from testproject.example.models import ExampleOption
 
 class ExampleOptionForm(DivanForm):
     class Divan:

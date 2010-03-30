@@ -1,13 +1,11 @@
 from datetime import date, datetime, time
 from django.conf import settings
 from django.test import TestCase
-from couchdb import Server
-from django_divan.divan.models import BaseOption
-from django_divan.divan.forms import field_and_kwargs
-from django_divan.example.forms import ExampleOptionForm
-from django_divan.example.models import ExampleOption, Example
-
-DEFAULT_DIVAN_SERVER = getattr(settings, 'DEFAULT_DIVAN_SERVER', 'http://localhost:5984/')
+from divan import db
+from divan.models import BaseOption
+from divan.forms import field_and_kwargs
+from testproject.example.forms import ExampleOptionForm
+from testproject.example.models import ExampleOption, Example
 
 
 class DivanOptionTestCase(TestCase):
@@ -31,12 +29,9 @@ class DivanFormTestCase(TestCase):
             self.assertTrue(field in ('foo_bar', 'baz_quux')) 
 
     def test_initialized_form(self):
-        server = Server(DEFAULT_DIVAN_SERVER)
-        db = server['example']
         doc_dict = {'foo_bar': 'Spam, spam, spam', 'baz_quux': False}
-        doc_id = db.create(doc_dict)
-        doc = db[doc_id]
-        form = ExampleOptionForm(document=doc)
+        document = db.create(doc_dict)
+        form = ExampleOptionForm(document=document)
         self.assertEquals(form.initial, doc_dict)
 
     def test_bound_form_create_doc(self):
@@ -75,7 +70,7 @@ class DivanDateTimeFieldTestCase(TestCase):
             doc = form.save()
         except TypeError, e:
             self.fail(e)
-        obj = Example(document_id=doc.id)
+        obj = Example(doc)
         self.assertEquals(obj.date_and_time, now)
         self.assertEquals(obj.date, today)
         self.assertEquals(obj.time, timeslot)
@@ -91,11 +86,9 @@ class DivanModelTestCase(TestCase):
         ExampleOption.objects.create(field_name='Rice', field_type='FloatField', group='vegan')
 
     def test_iterate_over_fields(self):
-        server = Server(DEFAULT_DIVAN_SERVER)
-        db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5, 'toast': 0.456}
-        doc_id = db.create(doc_dict)
-        example = Example(db[doc_id])
+        document = db.create(doc_dict)
+        example = Example(document)
         for field in example.fields:
             example_option = ExampleOption.objects.get(field_name=field.label)
             self.assertEquals(field.label, example_option.field_name)
@@ -104,28 +97,22 @@ class DivanModelTestCase(TestCase):
             self.assertEquals(len(fields), 2)
 
     def test_doc_has_extra_keys(self):
-        server = Server(DEFAULT_DIVAN_SERVER)
-        db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5, 'toast': 0.456, 'juice': 10}
-        doc_id = db.create(doc_dict)
-        example = Example(db[doc_id])
+        document = db.create(doc_dict)
+        example = Example(document)
         self.assertRaises(AttributeError, getattr, example, 'juice')
         self.assertTrue(hasattr(example, 'spam'))
 
     def test_doc_has_missing_values(self):
-        server = Server(DEFAULT_DIVAN_SERVER)
-        db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5}
-        doc_id = db.create(doc_dict)
-        example = Example(db[doc_id])
+        document = db.create(doc_dict)
+        example = Example(document)
         self.assertRaises(AttributeError, getattr, example, 'toast')
 
     def test_doc_has_attr_but_not_group(self):
-        server = Server(DEFAULT_DIVAN_SERVER)
-        db = server['example']
         doc_dict = {'spam': 'Spam, spam, spam', 'bacon': False, 'eggs': 5, 'toast': 0.456, 'juice': 10, 'rice': 4.4}
-        doc_id = db.create(doc_dict)
-        example = Example(db[doc_id])
+        document = db.create(doc_dict)
+        example = Example(document)
         self.assertFalse(example.groups.has_key('vegan'))
         self.assertTrue(hasattr(example, 'rice'))
 

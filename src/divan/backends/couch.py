@@ -1,4 +1,4 @@
-from couchdb import Server, client
+from couchdb.client import Server
 from divan.backends.base import BaseDivanBackend
 from divan.timestamps import from_timestamp, to_timestamp
 
@@ -23,7 +23,7 @@ class CouchDB(BaseDivanBackend):
 
     def connect(self, database, host, port):
         server = Server('http://%s:%s' % (host, port))
-        self.db = server[DEFAULT_DIVAN_DATABASE]
+        self.db = server[database]
 
     def create(self, data):
         doc_id = self.db.create(data)

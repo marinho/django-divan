@@ -7,7 +7,6 @@ from django.utils import simplejson
 from django.utils.datastructures import SortedDict
 from django.utils.translation import ugettext as _
 from django.forms.widgets import media_property
-from couchdb import Server, client
 from divan import db
 from divan.models import BaseOption
 
@@ -72,7 +71,6 @@ def get_saved_fields(model, groups, divan):
 
 def save_document(form, document_id, fields=None):
     cleaned_data = form.cleaned_data
-    db = form.database
     for k, v in [(k, form.fields[k]) for k in cleaned_data.keys() if form.fields.has_key(k) and cleaned_data.get(k)]:
         cls_name = v.__class__.__name__
         divan = form._divan
@@ -119,7 +117,7 @@ class BaseDivanForm(forms.BaseForm):
         if document is None:
             self.document_id = None
         else:
-            self.document_id = db.get_id(document)
+            self.document_id = db.get_id_for_document(document)
             for k, v in document.iteritems():
                 if k not in db.exclude_keys:
                     document_data[k] = v

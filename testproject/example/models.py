@@ -1,5 +1,5 @@
 from django.db import models
-from django_divan.divan.models import BaseOption, DivanModel, OptionChoice
+from divan.models import BaseOption, DivanModel, OptionChoice
 
 class ExampleOption(BaseOption):
     active = models.BooleanField()

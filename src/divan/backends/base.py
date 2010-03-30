@@ -18,7 +18,7 @@ class BaseDivanBackend(object):
         ``get_document_attr``.
         """
         try:
-            self.get_document_attr(document, field):
+            return self.get_document_attr(document, field)
         except:
             raise AttributeError
 
