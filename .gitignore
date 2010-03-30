@@ -14,3 +14,6 @@ eggs
 parts
 src
 docs/_build
+docs/Makefile
+docs/make.bat
+docs/conf.py
