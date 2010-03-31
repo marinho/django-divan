@@ -31,6 +31,8 @@ class DivanFormTestCase(TestCase):
     def test_initialized_form(self):
         doc_dict = {'foo_bar': 'Spam, spam, spam', 'baz_quux': False}
         document = db.create(doc_dict)
+        doc_dict.pop('_id', None) # Pops the id when testing on Mongo
+
         form = ExampleOptionForm(document=document)
         self.assertEquals(form.initial, doc_dict)
 
