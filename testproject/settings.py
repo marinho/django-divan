@@ -83,3 +83,4 @@ INSTALLED_APPS = (
 DIVAN_BACKEND = 'divan.backends.mongo.MongoDB'
 DIVAN_DATABASE = 'test'
 DIVAN_STORE = 'divan' # Additional information for Mongo. Default is 'divan'
+
