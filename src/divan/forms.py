@@ -54,8 +54,8 @@ def create_form_field(option, divan):
             kwargs['queryset'] = getattr(option, option._divan.choice_related_name).all()
     help_text = getattr(option, 'help_text', None)
     if help_text:
-        help_text = _(help_text)
-    return FieldClass(label=_(option.field_name), required=option.required, 
+        help_text = help_text
+    return FieldClass(label=option.field_name, required=option.required, 
             help_text=help_text, **kwargs)
 
 def get_saved_fields(model, groups, divan):

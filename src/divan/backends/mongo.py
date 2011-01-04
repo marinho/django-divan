@@ -41,10 +41,7 @@ class MongoDB(BaseDivanBackend):
         return document
 
     def update(self, document_id, data):
-        if not isinstance(document_id, ObjectId):
-            document_id = ObjectId(document_id)
-
-        document = self.namespace.find_one(document_id)
+        document = self.namespace.find_one({'_id': document_id})
         for k, v in data.items():
             if v:
                 document[k] = v
@@ -57,6 +54,9 @@ class MongoDB(BaseDivanBackend):
 
     def get_id_for_document(self, document):
         return str(document['_id'])
+
+    def get_document_for_id(self, id):
+        return self.namespace.find_one({'_id': id})
 
     def get_document_attr(self, document, field):
         return document[field] # FIXME?

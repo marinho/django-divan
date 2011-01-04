@@ -12,6 +12,9 @@ class BaseDivanBackend(object):
         self.port = port or self.default_port
         self.db = self.connect(self.database, self.host, self.port)
 
+    def __getitem__(self, key):
+        return self.get_document_for_id(key)
+
     def get_value_for_field(self, document, field):
         """Fetches a value for a given document and a given field.  Subclasses
         should not override this method; rather, they should override 
@@ -33,6 +36,9 @@ class BaseDivanBackend(object):
         raise NotImplementedError()
 
     def get_id_for_document(self, document):
+        raise NotImplementedError()
+
+    def get_document_for_id(self, id):
         raise NotImplementedError()
 
     def get_document_attr(self, document, field):

@@ -43,5 +43,9 @@ class CouchDB(BaseDivanBackend):
     def get_id_for_document(self, document):
         return document['_id']
 
+    def get_document_for_id(self, id):
+        return self.db[id]
+
+
     def get_document_attr(self, document, field):
         return document[field]
